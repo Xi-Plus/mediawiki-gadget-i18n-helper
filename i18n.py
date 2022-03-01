@@ -7,6 +7,7 @@ import requests
 parser = argparse.ArgumentParser()
 parser.add_argument('files', nargs='+')
 parser.add_argument('--mode', nargs='?', type=int, choices=[1, 2], default=2)
+parser.add_argument('--function', default='wgULS')
 args = parser.parse_args()
 
 run_files = args.files
@@ -75,7 +76,7 @@ for filename in run_files:
     with open(filename, 'r', encoding='utf8') as f:
         jstext = f.read()
 
-    matches = re.findall(r"wgULS\(\s*'(.*?)',\s*?'((?:[^()]|\([^()]*?\))*?)'\s*\)", jstext)
+    matches = re.findall(args.function + r"\(\s*'(.*?)',\s*?'((?:[^()]|\([^()]*?\))*?)'\s*\)", jstext)
 
     text = noteTA
 
@@ -120,12 +121,12 @@ for filename in run_files:
         else:
             newregex = r'\g<1>{}\g<3>\g<4>\g<5>'.format(newtext)
         jstext = re.sub(
-            r"(wgULS\(\s*')({})(',\s*?')({})('\s*\))".format(re.escape(messages[idx][0]), re.escape(messages[idx][1])),
+            r"(" + args.function + r"\(\s*')({})(',\s*?')({})('\s*\))".format(re.escape(messages[idx][0]), re.escape(messages[idx][1])),
             newregex,
             jstext,
         )
 
-    jstext = re.sub(r"wgULS\(\s*'(.+?)',\s*?'\1'\s*\)", r"'\1'", jstext)
+    jstext = re.sub(args.function + r"\(\s*'(.+?)',\s*?'\1'\s*\)", r"'\1'", jstext)
 
     with open(filename, 'w', encoding='utf8') as f:
         f.write(jstext)
