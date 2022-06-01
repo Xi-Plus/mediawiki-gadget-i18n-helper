@@ -1,6 +1,7 @@
 import argparse
-import re
 import json
+import re
+from collections import OrderedDict
 
 parser = argparse.ArgumentParser()
 parser.add_argument('source')
@@ -43,6 +44,19 @@ try:
         target_hant[key] = match[1]
 except KeyboardInterrupt:
     pass
+
+matches = (
+    re.findall(re.escape(args.new_function) + r"\('(.+?)'\)", source)
+    + re.findall(re.escape(args.new_function) + r"\('(.+?)',", source)
+    + re.findall(r'<i18n-t keypath="(.+?)"', source)
+)
+key_idx = {}
+for match in matches:
+    if match not in key_idx:
+        key_idx[match] = source.index(match)
+
+target_hans = OrderedDict(sorted(target_hans.items(), key=lambda v: key_idx.get(v[0], 0)))
+target_hant = OrderedDict(sorted(target_hant.items(), key=lambda v: key_idx.get(v[0], 0)))
 
 print('Write to files')
 with open(args.source, 'w', encoding='utf8') as f:
