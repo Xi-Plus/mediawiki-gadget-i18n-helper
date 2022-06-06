@@ -1,17 +1,19 @@
 import argparse
 import html
+import json
 import re
 
 import requests
 
 parser = argparse.ArgumentParser()
 parser.add_argument('files', nargs='+')
-parser.add_argument('--mode', nargs='?', type=int, choices=[1, 2], default=2)
+parser.add_argument('--uselang', default='zh-cn')
+parser.add_argument('--mode', choices=['single', 'i18n'], default='single')
 parser.add_argument('--function', default='wgULS')
 args = parser.parse_args()
+print(args)
 
 run_files = args.files
-print(run_files)
 
 noteTA = '''{{NoteTA
 |G1=IT
@@ -71,63 +73,91 @@ def escapeWikitext(text):
     return text
 
 
-for filename in run_files:
-    print(filename)
-
-    with open(filename, 'r', encoding='utf8') as f:
-        jstext = f.read()
-
-    matches = re.findall(args.function + r"\(\s*'(.*?)',\s*?'((?:[^()]|\([^()]*?\))*?)'\s*\)", jstext)
-
+def convertMessages(messages, uselang):
     text = noteTA
+    for key, message in messages.items():
+        text += '<div id="text-{}">{}</div>'.format(key, escapeWikitext(message))
 
-    messages = []
-    for match in matches:
-        # print(match)
-        if args.mode == 1:
-            orimessage = match[0]
-        else:
-            orimessage = match[1]
-        text += '<div id="text{}">{}</div>'.format(len(messages), escapeWikitext(orimessage))
-        messages.append((match[0], match[1]))
-
-    # print(text)
     data = {
         'action': 'parse',
         'format': 'json',
         'text': text,
         'prop': 'text',
         'contentmodel': 'wikitext',
-        'utf8': 1
+        'uselang': uselang,
     }
-    if args.mode == 1:
-        data['uselang'] = 'zh-tw'
-    else:
-        data['uselang'] = 'zh-cn'
     r = requests.post('https://zh.wikipedia.org/w/api.php', data=data, headers=headers)
     try:
-        result = r.json()
+        r_json = r.json()
     except Exception as e:
         print(e)
         print(r.text)
-        continue
-    result = result['parse']['text']['*']
-    matches = re.findall(r'<div id="text(\d+)">(.+?)</div>', result)
+        return {}
+    parsed_text = r_json['parse']['text']['*']
+
+    matches = re.findall(r'<div id="text-(.+?)">(.+?)</div>', parsed_text)
+    result = {}
     for match in matches:
-        idx = int(match[0])
-        newtext = html.unescape(match[1]).replace('\\n', '\\\\n')
-        # print(idx, newtext)
-        if args.mode == 1:
-            newregex = r'\g<1>\g<2>\g<3>{}\g<5>'.format(newtext)
-        else:
-            newregex = r'\g<1>{}\g<3>\g<4>\g<5>'.format(newtext)
-        jstext = re.sub(
-            r"(" + args.function + r"\(\s*')({})(',\s*?')({})('\s*\))".format(re.escape(messages[idx][0]), re.escape(messages[idx][1])),
-            newregex,
-            jstext,
-        )
+        key = match[0]
+        if key.isdigit():
+            key = int(key)
+        new_text = html.unescape(match[1]).replace('\\n', '\\\\n')
 
-    jstext = re.sub(args.function + r"\(\s*'(.+?)',\s*?'\1'\s*\)", r"'\1'", jstext)
+        result[key] = new_text
+    return result
 
-    with open(filename, 'w', encoding='utf8') as f:
-        f.write(jstext)
+
+if args.mode == 'single':
+    for filename in run_files:
+        print(filename)
+
+        with open(filename, 'r', encoding='utf8') as f:
+            jstext = f.read()
+
+        matches = re.findall(args.function + r"\(\s*'(.*?)',\s*?'((?:[^()]|\([^()]*?\))*?)'\s*\)", jstext)
+
+        old_messages = []
+        messages_to_convert = {}
+        for match in matches:
+            # print(match)
+            if args.lang == 1:
+                orimessage = match[0]
+            else:
+                orimessage = match[1]
+            messages_to_convert[len(old_messages)] = orimessage
+            old_messages.append((match[0], match[1]))
+
+        converted_messages = convertMessages(messages_to_convert, args.uselang)
+
+        for idx, newtext in converted_messages.items():
+            # print(idx, newtext)
+            if args.lang == 1:
+                newregex = r'\g<1>\g<2>\g<3>{}\g<5>'.format(newtext)
+            else:
+                newregex = r'\g<1>{}\g<3>\g<4>\g<5>'.format(newtext)
+            jstext = re.sub(
+                r"(" + args.function + r"\(\s*')({})(',\s*?')({})('\s*\))".format(re.escape(old_messages[idx][0]), re.escape(old_messages[idx][1])),
+                newregex,
+                jstext,
+            )
+
+        jstext = re.sub(args.function + r"\(\s*'(.+?)',\s*?'\1'\s*\)", r"'\1'", jstext)
+
+        with open(filename, 'w', encoding='utf8') as f:
+            f.write(jstext)
+
+elif args.mode == 'i18n':
+    if len(run_files) != 2:
+        print('Must be 2 files')
+        exit()
+
+    with open(run_files[0], 'r', encoding='utf8') as f:
+        src_json = json.load(f)
+    with open(run_files[1], 'r', encoding='utf8') as f:
+        dst_json = json.load(f)
+    converted_messages = convertMessages(src_json, args.uselang)
+    for key, message in converted_messages.items():
+        dst_json[key] = message
+
+    with open(run_files[1], 'w', encoding='utf8') as f:
+        json.dump(dst_json, f, ensure_ascii=False, indent=2)
