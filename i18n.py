@@ -160,4 +160,4 @@ elif args.mode == 'i18n':
         dst_json[key] = message
 
     with open(run_files[1], 'w', encoding='utf8') as f:
-        json.dump(dst_json, f, ensure_ascii=False, indent=2)
+        json.dump(dst_json, f, ensure_ascii=False, indent='\t')
