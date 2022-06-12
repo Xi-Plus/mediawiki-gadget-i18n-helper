@@ -144,7 +144,7 @@ if args.mode == 'single':
 
         jstext = re.sub(args.function + r"\(\s*'(.+?)',\s*?'\1'\s*\)", r"'\1'", jstext)
 
-        with open(filename, 'w', encoding='utf8') as f:
+        with open(filename, 'w', encoding='utf8', newline='\n') as f:
             f.write(jstext)
 
 elif args.mode == 'i18n':
@@ -160,5 +160,6 @@ elif args.mode == 'i18n':
     for key, message in converted_messages.items():
         dst_json[key] = message
 
-    with open(run_files[1], 'w', encoding='utf8') as f:
+    with open(run_files[1], 'w', encoding='utf8', newline='\n') as f:
         json.dump(dst_json, f, ensure_ascii=False, indent='\t')
+        f.write('\n')
