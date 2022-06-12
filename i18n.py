@@ -2,6 +2,7 @@ import argparse
 import html
 import json
 import re
+from collections import OrderedDict
 
 import requests
 
@@ -156,9 +157,11 @@ elif args.mode == 'i18n':
         src_json = json.load(f)
     with open(run_files[1], 'r', encoding='utf8') as f:
         dst_json = json.load(f)
+    key_idx = dict(zip(src_json.keys(), range(len(src_json))))
     converted_messages = convertMessages(src_json, args.uselang)
     for key, message in converted_messages.items():
         dst_json[key] = message
+    dst_json = OrderedDict(sorted(dst_json.items(), key=lambda v: key_idx.get(v[0], len(src_json))))
 
     with open(run_files[1], 'w', encoding='utf8', newline='\n') as f:
         json.dump(dst_json, f, ensure_ascii=False, indent='\t')
