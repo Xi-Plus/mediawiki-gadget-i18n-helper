@@ -7,6 +7,7 @@ import requests
 
 parser = argparse.ArgumentParser()
 parser.add_argument('files', nargs='+')
+parser.add_argument('--srctext', type=int, default='2', choices=[1, 2])
 parser.add_argument('--uselang', default='zh-cn')
 parser.add_argument('--mode', choices=['single', 'i18n'], default='single')
 parser.add_argument('--function', default='wgULS')
@@ -120,7 +121,7 @@ if args.mode == 'single':
         messages_to_convert = {}
         for match in matches:
             # print(match)
-            if args.lang == 1:
+            if args.srctext == 1:
                 orimessage = match[0]
             else:
                 orimessage = match[1]
@@ -131,7 +132,7 @@ if args.mode == 'single':
 
         for idx, newtext in converted_messages.items():
             # print(idx, newtext)
-            if args.lang == 1:
+            if args.srctext == 1:
                 newregex = r'\g<1>\g<2>\g<3>{}\g<5>'.format(newtext)
             else:
                 newregex = r'\g<1>{}\g<3>\g<4>\g<5>'.format(newtext)
