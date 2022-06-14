@@ -9,6 +9,7 @@ parser.add_argument('target_hans')
 parser.add_argument('target_hant')
 parser.add_argument('--old_function', default='wgULS')
 parser.add_argument('--new_function', default='$t')
+parser.add_argument('--other_function', default=[], nargs='*')
 args = parser.parse_args()
 print(args)
 
@@ -46,10 +47,12 @@ except KeyboardInterrupt:
     pass
 
 matches = (
-    re.findall(re.escape(args.new_function) + r"\('(.+?)'\)", source)
-    + re.findall(re.escape(args.new_function) + r"\('(.+?)',", source)
+    re.findall(re.escape(args.new_function) + r"\('(.+?)'[),]", source)
     + re.findall(r'<i18n-t keypath="(.+?)"', source)
 )
+for function in args.other_function:
+    matches.extend(re.findall(re.escape(function) + r"\('(.+?)'[),]", source))
+
 key_idx = {}
 for match in matches:
     if match not in key_idx:
@@ -59,9 +62,11 @@ target_hans = OrderedDict(sorted(target_hans.items(), key=lambda v: key_idx.get(
 target_hant = OrderedDict(sorted(target_hant.items(), key=lambda v: key_idx.get(v[0], 0)))
 
 print('Write to files')
-with open(args.source, 'w', encoding='utf8') as f:
+with open(args.source, 'w', encoding='utf8', newline='\n') as f:
     f.write(source)
-with open(args.target_hans, 'w', encoding='utf8') as f:
+with open(args.target_hans, 'w', encoding='utf8', newline='\n') as f:
     json.dump(target_hans, f, ensure_ascii=False, indent=2)
-with open(args.target_hant, 'w', encoding='utf8') as f:
+    f.write('\n')
+with open(args.target_hant, 'w', encoding='utf8', newline='\n') as f:
     json.dump(target_hant, f, ensure_ascii=False, indent=2)
+    f.write('\n')
