@@ -12,10 +12,15 @@ parser.add_argument('--srctext', type=int, default='2', choices=[1, 2])
 parser.add_argument('--uselang', default='zh-cn')
 parser.add_argument('--mode', choices=['single', 'i18n'], default='single')
 parser.add_argument('--function', default='wgULS')
+parser.add_argument('--indent', type=int)
 args = parser.parse_args()
 print(args)
 
 run_files = args.files
+if args.indent:
+    INDENT = args.indent
+else:
+    INDENT = '\t'
 
 noteTA = '''{{NoteTA
 |G1=IT
@@ -164,5 +169,5 @@ elif args.mode == 'i18n':
     dst_json = OrderedDict(sorted(dst_json.items(), key=lambda v: key_idx.get(v[0], len(src_json))))
 
     with open(run_files[1], 'w', encoding='utf8', newline='\n') as f:
-        json.dump(dst_json, f, ensure_ascii=False, indent='\t')
+        json.dump(dst_json, f, ensure_ascii=False, indent=INDENT)
         f.write('\n')
