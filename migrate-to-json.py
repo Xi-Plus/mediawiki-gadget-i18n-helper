@@ -57,6 +57,10 @@ key_idx = {}
 for match in matches:
     if match not in key_idx:
         key_idx[match] = source.index(match)
+    if match not in target_hans:
+        target_hans[match] = 'TODO'
+    if match not in target_hant:
+        target_hant[match] = 'TODO'
 
 target_hans = OrderedDict(sorted(target_hans.items(), key=lambda v: key_idx.get(v[0], 0)))
 target_hant = OrderedDict(sorted(target_hant.items(), key=lambda v: key_idx.get(v[0], 0)))
